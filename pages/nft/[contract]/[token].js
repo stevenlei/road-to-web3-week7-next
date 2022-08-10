@@ -458,7 +458,7 @@ const Info = () => {
                   <ul className="mt-10 text-xl text-slate-500">
                     <li className="flex mt-2 flex-wrap">
                       <span className="block w-full lg:w-60">Contract Address</span>
-                      <span className="block flex-1 text-slate-700 break-word break-all">
+                      <span className="block flex-1 text-slate-700 break-word break-all text-sm sm:text-lg">
                         <a
                           href={`https://etherscan.io/address/${nft.contract.address}`}
                           target="_blank"
@@ -501,7 +501,7 @@ const Info = () => {
                         )}
                       </span>
                     </li>
-                    <li className="flex mt-2">
+                    <li className="flex mt-2 flex-wrap lg:flex-nowrap">
                       <span className="block w-full lg:w-60">Token ID</span>
                       <span className="block flex-1 text-slate-700">#{Number(nft.id.tokenId)}</span>
                     </li>
@@ -509,11 +509,13 @@ const Info = () => {
                       <>
                         {listInfo.royalty.toNumber() !== 0 && (
                           <>
-                            <li className="flex mt-8">
+                            <li className="flex flex-wrap lg:flex-nowrap mt-8">
                               <span className="block w-full lg:w-60">Royalty Address</span>
-                              <span className="block flex-1 text-slate-700">{listInfo.royaltyAddress}</span>
+                              <span className="block flex-1 text-slate-700 text-sm sm:text-lg">
+                                {listInfo.royaltyAddress}
+                              </span>
                             </li>
-                            <li className="flex mt-2">
+                            <li className="flex flex-wrap lg:flex-nowrap mt-2">
                               <span className="block w-full lg:w-60">Royalty Rate</span>
                               <span className="block flex-1 text-slate-700">
                                 {+ethers.utils.formatUnits(listInfo.royalty, "gwei") * 100}%
@@ -521,18 +523,18 @@ const Info = () => {
                             </li>
                           </>
                         )}
-                        <li className="flex mt-8">
+                        <li className="flex mt-8 flex-wrap lg:flex-nowrap">
                           <span className="block w-full lg:w-60">Seller</span>
-                          <span className="block flex-1 text-slate-700">{listInfo.seller}</span>
+                          <span className="block flex-1 text-slate-700 text-sm sm:text-lg">{listInfo.seller}</span>
                         </li>
-                        <li className="flex mt-2">
+                        <li className="flex mt-2 flex-wrap lg:flex-nowrap">
                           <span className="block w-full lg:w-60">Selling Price</span>
                           <span className="block flex-1 text-slate-700 font-bold text-3xl">
                             {ethers.utils.formatEther(listInfo.price)} ETH
                           </span>
                         </li>
                         {walletAddress && (
-                          <li className="flex mt-8">
+                          <li className="flex mt-8 flex-wrap lg:flex-nowrap">
                             <span className="block w-full lg:w-60"></span>
                             <span className="block flex-1 text-slate-700">
                               <button
@@ -569,10 +571,10 @@ const Info = () => {
                       <h4 className="font-bold text-xl text-slate-600">
                         {listInfo && listInfo.isListed ? "Update Listing" : "List this NFT"}
                       </h4>
-                      <div className="my-4 mt-8 flex gap-x-4">
+                      <div className="my-4 mt-8 flex gap-x-4 flex-wrap sm:flex-nowrap">
                         {isApproved ? (
                           <>
-                            <div className="flex-1">
+                            <div className="flex-1 w-full sm:w-auto">
                               <label htmlFor="sellingPrice" className="text-lg font-bold mb-2">
                                 Price
                               </label>
@@ -580,7 +582,7 @@ const Info = () => {
                                 id="sellingPrice"
                                 type="text"
                                 disabled={isListing || isUnlisting}
-                                className="w-full px-4 disabled:bg-slate-100 py-2 mt-1 border rounded-lg shadow-sm focus:outline-none focus:shadow-outline"
+                                className="w-full px-4 mb-4 sm:mb-0 disabled:bg-slate-100 py-2 mt-1 border rounded-lg shadow-sm focus:outline-none focus:shadow-outline"
                                 placeholder="Selling Price in ETH"
                                 value={sellingPrice}
                                 onChange={(e) => setSellingPrice(e.target.value)}
@@ -588,7 +590,7 @@ const Info = () => {
                             </div>
                             <button
                               disabled={!isApproved || !correctSellingPrice() || isListing}
-                              className="w-60 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 self-end py-2 text-lg rounded-full text-white"
+                              className="w-full sm:w-60 mb-4 sm:mb-0 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 self-end py-2 text-lg rounded-full text-white"
                               onClick={listItem}
                             >
                               {isListing ? (
@@ -600,7 +602,7 @@ const Info = () => {
                             {listInfo && listInfo.isListed && (
                               <button
                                 disabled={isUnlisting}
-                                className="w-60 bg-slate-600 hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 self-end py-2 text-lg rounded-full text-white"
+                                className="w-full sm:w-60 mb-4 sm:mb-0 bg-slate-600 hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400 self-end py-2 text-lg rounded-full text-white"
                                 onClick={unlist}
                               >
                                 {isUnlisting ? loadingIcon() : "Unlist"}

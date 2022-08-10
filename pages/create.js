@@ -260,7 +260,7 @@ export default function Home() {
         <div className="p-4 md:p-6 lg:p-8 xl:p-12 bg-slate-100 rounded-xl mt-8">
           <h2 className="text-3xl font-bold">Create NFT</h2>
 
-          <div className="flex gap-x-8">
+          <div className="flex gap-x-8 flex-wrap md:flex-nowrap">
             <div className="flex-1">
               <div className="my-4 mt-8">
                 <label htmlFor="name" className="text-lg font-bold mb-2">
@@ -317,17 +317,8 @@ export default function Home() {
                   {creatorFee} ETH
                 </h6>
               </div>
-              <div className="text-right mt-6">
-                <button
-                  className="px-6 py-3 text-xl bg-slate-800 rounded-full text-white"
-                  onClick={createNft}
-                  disabled={isLoading}
-                >
-                  {isLoading ? loadingIcon() : "Create"}
-                </button>
-              </div>
             </div>
-            <div className="w-48 md:w-64 xl:w-72">
+            <div className="w-full sm:w-48 md:w-64 xl:w-72">
               <div className="my-8">
                 <label className="text-lg font-bold mb-2">Image</label>
                 <div className="mt-1 bg-white rounded-lg border px-4 shadow-sm flex flex-col justify-center items-center">
@@ -371,6 +362,15 @@ export default function Home() {
                     Selected image will be uploaded to an IPFS network, which is public.
                   </p>
                 </div>
+              </div>
+              <div className="text-right mt-6">
+                <button
+                  className="px-6 py-3 text-xl bg-slate-800 rounded-full text-white"
+                  onClick={createNft}
+                  disabled={isLoading}
+                >
+                  {isLoading ? loadingIcon() : "Create"}
+                </button>
               </div>
             </div>
           </div>
