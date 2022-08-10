@@ -7,28 +7,31 @@ import Header from "../components/Header";
 import Navbar from "../components/Navbar";
 
 const API_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
-import MarketplaceContract from "../contracts/Marketplace.json";
 let copiedTimeoutHandler;
 
 export default function Home() {
   const [walletAddress, setWalletAddress] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialised, setIsInitialised] = useState(false);
 
   const [balance, setBalance] = useState(0);
 
-  const [listedItems, setListedItems] = useState([]);
+  const [paginationNext, setPaginationNext] = useState(null);
+
+  const [collection, setCollection] = useState("");
+  const [wallet, setWallet] = useState("");
+  const [nfts, setNfts] = useState([]);
 
   const [copied, setCopied] = useState([]);
 
   useEffect(() => {
     checkIfWalletIsConnected();
     walletChangeListener();
-
-    fetchListedItems();
   }, []);
 
   useEffect(() => {
     if (walletAddress) {
+      fetchNfts();
       fetchBalance();
     }
   }, [walletAddress]);
@@ -95,6 +98,8 @@ export default function Home() {
   const fetchBalance = async () => {
     const provider = new ethers.providers.AlchemyProvider("goerli", process.env.NEXT_PUBLIC_ALCHEMY_API_KEY);
 
+    console.log(walletAddress);
+
     const balance = await provider.getBalance(walletAddress);
 
     setBalance(Number(ethers.utils.formatEther(balance)).toFixed(4));
@@ -115,6 +120,53 @@ export default function Home() {
       ></path>
     </svg>
   );
+
+  const fetchNfts = async (isNext) => {
+    setIsLoading(true);
+
+    try {
+      const baseURL = `${process.env.NEXT_PUBLIC_ALCHEMY_API_URL}/getNFTs/`;
+      let requestOptions = {
+        method: "GET",
+      };
+
+      let fetchURL = `${baseURL}?owner=${walletAddress}`;
+
+      if (isNext && paginationNext) {
+        fetchURL = `${fetchURL}&pageKey=${paginationNext}`;
+      } else {
+        setPaginationNext(null);
+      }
+
+      const results = await fetch(fetchURL, requestOptions).then((data) => data.json());
+
+      if (results) {
+        console.log("nfts:", nfts);
+        if (results.nfts) {
+          if (isNext) {
+            // Append
+            setNfts([...nfts, ...results.nfts]);
+          } else {
+            setNfts(results.nfts);
+          }
+          setPaginationNext(results.nextToken);
+        } else if (results.ownedNfts) {
+          if (isNext) {
+            // Append
+            setNfts([...nfts, ...results.ownedNfts]);
+          } else {
+            setNfts(results.ownedNfts);
+          }
+          setPaginationNext(results.pageKey);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+      setIsInitialised(true);
+    }
+  };
 
   const getThumbnail = (item) => {
     if (item.media.length > 0 && item.media[0].thumbnail) {
@@ -164,6 +216,26 @@ export default function Home() {
     return `${address.substr(0, 6)}...${address.substr(address.length - 4, 4)}`;
   };
 
+  const getFilterTitle = () => {
+    if (collection.length > 0 && wallet.length > 0) {
+      return "Filter Collection by Address";
+    } else if (collection.length > 0 && wallet.length === 0) {
+      return "Search Collection";
+    } else if (collection.length === 0 && wallet.length > 0) {
+      return "NFTs owned by Wallet";
+    } else {
+      return "Search";
+    }
+  };
+
+  const setMyAddress = async () => {
+    if (!walletAddress) {
+      setWallet(await connectWallet());
+    } else {
+      setWallet(walletAddress);
+    }
+  };
+
   const copy = (address, index) => {
     if (copiedTimeoutHandler) {
       clearTimeout(copiedTimeoutHandler);
@@ -182,51 +254,6 @@ export default function Home() {
     }, 1500);
   };
 
-  const fetchListedItems = async () => {
-    setIsLoading(true);
-
-    const provider = new ethers.providers.AlchemyProvider("goerli", process.env.NEXT_PUBLIC_ALCHEMY_API_KEY);
-    const marketplace = new ethers.Contract(
-      process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT,
-      MarketplaceContract.abi,
-      provider
-    );
-
-    const listedItems = await marketplace.getItems(true);
-
-    console.log(listedItems);
-
-    const items = await Promise.all(
-      listedItems
-        .filter((item) => item.contractAddress !== "0x0000000000000000000000000000000000000000")
-        .map(async (item) => {
-          return {
-            contractAddress: item.contractAddress,
-            tokenId: item.tokenId,
-            price: ethers.utils.formatEther(item.price),
-            isListed: item.isListed,
-            metadata: await fetchMetadata(item.contractAddress, item.tokenId),
-          };
-        })
-    );
-
-    setListedItems(items);
-
-    console.log(items);
-
-    setIsLoading(false);
-  };
-
-  const fetchMetadata = async (contractAddress, tokenId) => {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_ALCHEMY_API_URL}/getNFTMetadata?contractAddress=${contractAddress}&tokenId=${tokenId}`
-    );
-
-    const metadata = await res.json();
-
-    return metadata;
-  };
-
   return (
     <div className="min-h-screen bg-slate-900">
       <Head>
@@ -239,7 +266,7 @@ export default function Home() {
         <Header />
 
         <div className="bg-slate-50 p-8 mt-8 flex justify-between rounded-xl shadow-xl shadow-slate-900 gap-x-8 flex-wrap lg:flex-nowrap">
-          <Navbar active="marketplace" create={!!walletAddress} profile={!!walletAddress} />
+          <Navbar active="profile" create={!!walletAddress} profile={!!walletAddress} />
           <ul className="flex gap-x-6">
             {!walletAddress && (
               <li className="bg-blue-600 text-white rounded-full hover:bg-blue-700">
@@ -259,35 +286,32 @@ export default function Home() {
           </ul>
         </div>
 
-        <div className="p-4 md:p-6 lg:p-8 xl:p-8 bg-slate-100 rounded-xl mt-8">
-          <div className="flex gap-y-8 flex-wrap">
-            {listedItems.length === 0 && (
-              <div className="text-center text-xl flex-1 text-slate-600">
-                {isLoading ? loadingIcon("text-slate-600") : "No results"}
-              </div>
-            )}
+        {isInitialised && (
+          <div className="p-4 md:p-6 lg:p-8 xl:p-8 bg-slate-100 rounded-xl mt-8">
+            <div className="flex gap-y-8 flex-wrap">
+              {nfts.length === 0 && (
+                <div className="text-center text-xl flex-1 text-slate-600">
+                  {isLoading ? loadingIcon("text-slate-600") : "No results"}
+                </div>
+              )}
 
-            {listedItems.map((item, index) => (
-              <div key={index} className="w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5 2xl:w-1/6 p-2">
-                <a
-                  href={`/nft/${item.contractAddress}/${Number(item.tokenId)}/`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group"
-                >
-                  <div className="block transition overflow-hidden rounded-md bg-white">
-                    <img
-                      src={getThumbnail(item.metadata)}
-                      className="w-full group-hover:scale-125 transition duration-400"
-                    />
-                  </div>
-                  <h4 className="mt-2 text-lg text-slate-700 font-bold group-hover:text-slate-900">
-                    {getTitle(item.metadata)}
-                  </h4>
-                </a>
-                <div className="flex justify-between">
+              {nfts.map((item, index) => (
+                <div key={index} className="w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5 2xl:w-1/6 p-2">
+                  <a
+                    href={`/nft/${item.contract.address}/${Number(item.id.tokenId)}/`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group"
+                  >
+                    <div className="block transition overflow-hidden rounded-md bg-white">
+                      <img src={getThumbnail(item)} className="w-full group-hover:scale-125 transition duration-400" />
+                    </div>
+                    <h4 className="mt-2 text-lg text-slate-700 font-bold group-hover:text-slate-900">
+                      {getTitle(item)}
+                    </h4>
+                  </a>
                   <h5 className="text-md text-slate-500 group-hover:text-slate-600">
-                    {shortenAddress(item.contractAddress)}
+                    {shortenAddress(item.contract.address)}
 
                     {!copied[index] && (
                       <svg
@@ -296,7 +320,7 @@ export default function Home() {
                         height="18"
                         viewBox="0 0 24 24"
                         width="18"
-                        onClick={() => copy(item.contractAddress, index)}
+                        onClick={() => copy(item.contract.address, index)}
                       >
                         <path d="M0 0h24v24H0V0z" fill="none"></path>
                         <path
@@ -322,12 +346,23 @@ export default function Home() {
                       </svg>
                     )}
                   </h5>
-                  <h5 className="text-md text-blue-700 text-right group-hover:text-slate-600">{item.price} ETH</h5>
                 </div>
+              ))}
+            </div>
+
+            {paginationNext && (
+              <div className="text-center mt-12">
+                <button
+                  onClick={() => fetchNfts(true)}
+                  disabled={isLoading || (collection.length === 0 && wallet.length === 0)}
+                  className="bg-slate-600 disabled:text-slate-400 text-white w-full px-4 py-2 text-xl rounded-md shadow-lg mt-8 relative top-1"
+                >
+                  {isLoading ? loadingIcon() : "Next Page"}
+                </button>
               </div>
-            ))}
+            )}
           </div>
-        </div>
+        )}
       </main>
     </div>
   );
